@@ -1,0 +1,5 @@
+workflow.airtableOutgoing = 
+  [
+    { fieldNameOrId: 'Conversation ID', type: 'singleLineText', value: event.conversationId },
+    { fieldNameOrId: 'Transcript', type: 'multilineText', value: conversation.SummaryAgent.transcript }
+  ]
