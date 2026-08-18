@@ -1,0 +1,7 @@
+z.object({
+  fullname: z.string().describe('e.g., John Doe'),
+  orderAmount: z.number().describe('number to 2 decimal places'),
+  orderDetails: z.string().describe("The actual text list of items on the user's order"),
+  specialInstructions: z.string().describe("Any special insturctions related to the user's order"),
+  phone: z.string().describe("a string of numbers e.g., 561777888, 256777888999")
+})
