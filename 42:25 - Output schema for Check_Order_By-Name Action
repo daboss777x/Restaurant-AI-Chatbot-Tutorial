@@ -1,0 +1,5 @@
+z.object({
+  success: z.boolean().describe('Whether the order search was successful'),
+  message: z.string().optional().describe('Status or error message returned by the tool'),
+  records: z.array(z.record(z.any())).optional().describe('Array of order records retrieved from Airtable')
+});
