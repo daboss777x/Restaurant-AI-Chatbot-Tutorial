@@ -1,0 +1,172 @@
+const generateRandomCode = () => {
+ const prefix = 'YK';
+ const randomNumber = Math.floor(100000 + Math.random() * 900000); // Generate a random number between 100000 and 999999
+ return `${prefix}${randomNumber}`; // Format the code as YK000000
+};
+
+
+let code;
+let exists = true;
+
+
+while (exists) {
+ code = generateRandomCode(); // Generate a new code
+ const existingRecords = await OrdersTable.findRecords({ filter: { OrderID: code } }); // Check if the code exists in the Orders table
+ exists = existingRecords.length > 0; // If it exists, regenerate
+}
+
+
+// Now 'code' contains a unique random code in the desired format.
+console.log(code);
+
+
+await OrdersTable.createRecord({ OrderID: code });
+
+
+// Store the user's order ID in their variable
+user.orderID = code;
+
+
+// SENDING OUT THE ORDER
+const BASE_ID = 'app4bWf1l4npkFeop';
+const TABLE_NAME = 'ORDERS';
+const CUSTOMERS_TABLE = 'CUSTOMERS';
+const PERSONAL_ACCESS_TOKEN = env.airtablePAT;
+
+
+async function createOrder() {
+ const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
+
+
+ const payload = {
+   fields: {
+     // Order ID (single line text)
+     'Order ID': code,
+    
+     // Total Order Amount (currency)
+     'Total Order Amount': input.orderAmount,
+    
+     // Order Details (multiline text)
+     'Order Details': input.orderDetails,
+    
+     // Special Instructions (multiline text)
+     'Special Instructions': input.specialInstructions,
+    
+     // Linked Record field
+     'Customer': input.fullname,
+
+
+     // Conversation ID
+     'Conversation ID': event.conversationId
+   },
+   // Enables linking records by text string ('Enosh Omunu') instead of exact record IDs ('recXXXXX')
+   typecast: true
+ };
+
+
+ try {
+   const response = await fetch(url, {
+     method: 'POST',
+     headers: {
+       'Authorization': `Bearer ${PERSONAL_ACCESS_TOKEN}`,
+       'Content-Type': 'application/json'
+     },
+     body: JSON.stringify(payload)
+   });
+
+
+   if (!response.ok) {
+     const errorData = await response.json();
+     throw new Error(`Airtable API Error (${response.status}): ${JSON.stringify(errorData)}`);
+   }
+
+
+   const record = await response.json();
+   console.log('Record created successfully! ID:', record.id);
+
+
+   // Save Order Record ID to user object
+   user.airtableOrderID = record.id;
+
+
+   // Save user's name
+   user.fullName = input.fullname;
+
+
+   // Save user's phone
+   user.phone = input.phone;
+
+
+   // --- UPDATE CUSTOMER RECORD (Phone Number, User ID & Appended Conversations) ---
+   // Airtable automatically returns the linked customer's record ID inside record.fields.Customer[0]
+   const customerRecordId = record.fields?.Customer?.[0];
+
+
+   if (customerRecordId) {
+     // Save Customer Record ID to user object
+     user.airtableCustomerID = customerRecordId;
+
+
+     const customerUrl = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(CUSTOMERS_TABLE)}/${customerRecordId}`;
+
+
+     try {
+       // 1. Fetch current Customer record to retrieve existing linked conversations
+       const getCustomerRes = await fetch(customerUrl, {
+         headers: {
+           'Authorization': `Bearer ${PERSONAL_ACCESS_TOKEN}`
+         }
+       });
+
+
+       let existingConversations = [];
+       if (getCustomerRes.ok) {
+         const customerData = await getCustomerRes.json();
+         existingConversations = customerData.fields?.['Conversations'] || [];
+       }
+
+
+       // 2. Append new conversation ID without duplicating existing ones
+       const updatedConversations = Array.from(
+         new Set([...existingConversations, event.conversationId])
+       );
+
+
+       // 3. Patch Customer record with the appended Conversations array
+       const customerResponse = await fetch(customerUrl, {
+         method: 'PATCH',
+         headers: {
+           'Authorization': `Bearer ${PERSONAL_ACCESS_TOKEN}`,
+           'Content-Type': 'application/json'
+         },
+         body: JSON.stringify({
+           fields: {
+             'Phone Number': input.phone,
+             'User ID': event.userId,
+             'Conversations': updatedConversations
+           },
+           typecast: true
+         })
+       });
+
+
+       if (!customerResponse.ok) {
+         const customerErr = await customerResponse.json();
+         console.error('Error updating Customer details:', JSON.stringify(customerErr));
+       } else {
+         console.log('Customer details updated successfully! ID:', customerRecordId);
+       }
+     } catch (customerErr) {
+       console.error('Failed customer fetch/update process:', customerErr);
+     }
+   }
+
+
+   return record;
+ } catch (err) {
+   console.error('Error creating record in Airtable:', err);
+ }
+}
+
+
+createOrder();
