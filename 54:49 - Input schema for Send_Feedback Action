@@ -1,0 +1,5 @@
+z.object({
+  ratingFromTen: z.number(),
+  improvements: z.string(),
+  review: z.string(),
+})
