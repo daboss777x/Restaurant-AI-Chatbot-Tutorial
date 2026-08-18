@@ -1,0 +1,40 @@
+const inputs = input.config()
+console.log(inputs.conversationID)
+
+const BOTPRESS_WEBHOOK_URL = input.secret('botpressWebhookURL');
+
+async function sendWebhookToBotpress() {
+  const payload = {
+    conversationID: inputs.conversationID,
+    orderID: inputs.orderID,
+    status: inputs.status
+  };
+
+  try {
+    const response = await fetch(BOTPRESS_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Botpress Webhook Error (${response.status}): ${response.statusText}`);
+    }
+
+    // Safely handle empty response bodies from Botpress
+    const responseText = await response.text();
+    const data = responseText ? JSON.parse(responseText) : { success: true, status: response.status };
+
+    console.log('Data successfully sent to Botpress:', data);
+    return data;
+
+  } catch (err) {
+    console.error('Error sending webhook to Botpress:', err);
+    throw err;
+  }
+}
+
+// Execute function
+sendWebhookToBotpress();
