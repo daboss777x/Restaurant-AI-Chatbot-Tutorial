@@ -1,0 +1,7 @@
+1.  The Airtable Template
+Copy this link to clone the database: https://airtable.com/app4bWf1l4npkFeop/shrlHAeyFOpifCXiY 
+
+Integrating to airtable:
+Step 1: Copy this endpoint url: https://api.airtable.com/v0/ 
+Step 2: Input your base ID: app……
+Step 3: Generate and input your API key
